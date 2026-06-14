@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>1080p YouTube Downloader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 500px; margin: 2rem auto; padding: 1rem; background: #0f0f0f; color: white; }
+        input, button { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; border-radius: 8px; border: none; }
+        input { background: #222; color: white; }
+        button { background: #cc0000; color: white; font-weight: bold; cursor: pointer; }
+        .format { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding: 12px 0; }
+        button.download { background: #3ea6ff; color: black; width: auto; padding: 6px 12px; }
+    </style>
+</head>
+<body>
+    <h1>📥 1080p YouTube Downloader</h1>
+    <input type="text" id="url" placeholder="Paste YouTube URL here">
+    <button onclick="fetchFormats()">Get 1080p formats</button>
+    <div id="formats"></div>
+
+    <script>
+      
+        // 🔴 REPLACE THIS WITH YOUR RENDER BACKEND URL 🔴
+        const BACKEND = "https://yt-backend-ps84.onrender.com";
+
+        async function fetchFormats() {
+            const url = document.getElementById('url').value;
+            if (!url) return alert("Paste a YouTube URL");
+            document.getElementById('formats').innerHTML = "<p>Loading...</p>";
+            try {
+                const res = await fetch(`${BACKEND}/formats`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url})
+                });
+                const data = await res.json();
+                if (data.error) return alert(data.error);
+                let html = `<h3>${data.title}</h3>`;
+                for (let f of data.formats) {
+                    let size = f.filesize ? (f.filesize / 1e6).toFixed(1) + " MB" : "unknown size";
+                    html += `<div class="format">
+                        <span>🎬 1080p · ${f.ext} · ${size} ${f.has_audio ? "🔊" : "🎵 needs merge"}</span>
+                        <button class="download" onclick="downloadVideo('${f.format_id}')">Download</button>
+                    </div>`;
+                }
+                document.getElementById('formats').innerHTML = html;
+            } catch(e) {
+                alert("Error: " + e.message);
+            }
+        }
+
+        async function downloadVideo(formatId) {
+            const url = document.getElementById('url').value;
+            const res = await fetch(`${BACKEND}/download`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url, format_id: formatId})
+            });
+            const blob = await res.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'video.mp4';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+    </script>
+</body>
+</html>
